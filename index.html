@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sao chép biển số</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 24px;
+      font-family: Arial, sans-serif;
+      background: #f3f7fb;
+      color: #183858;
+    }
+    .card {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 24px;
+      background: white;
+      border: 1px solid #dce5ee;
+      border-radius: 14px;
+    }
+    h2 { margin: 0 0 20px; font-size: 20px; }
+    label { display: block; margin-bottom: 8px; }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; }
+    input {
+      flex: 1;
+      min-width: 140px;
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #bacbdb;
+      border-radius: 8px;
+      font-size: 20px;
+      color: #b00040;
+    }
+    button {
+      padding: 12px 18px;
+      border: 0;
+      border-radius: 8px;
+      background: #20558b;
+      color: white;
+      font-size: 15px;
+      cursor: pointer;
+    }
+    button:disabled { opacity: .6; cursor: wait; }
+    #message {
+      min-height: 40px;
+      margin: 14px 0 0;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h2>SAO CHÉP BIỂN SỐ</h2>
+    <label for="plate">Biển số xe</label>
+    <div class="row">
+      <input id="plate" type="text"
+             placeholder="Nhập biển số để thử"
+             autocomplete="off" spellcheck="false">
+      <button id="copy" type="button">📋 Sao chép</button>
+    </div>
+    <p id="message" role="status" aria-live="polite"></p>
+  </main>
+
+  <script>
+    const plate = document.getElementById("plate");
+    const button = document.getElementById("copy");
+    const message = document.getElementById("message");
+
+    plate.addEventListener("input", () => {
+      message.textContent = "";
+    });
+
+    button.addEventListener("click", async () => {
+      const value = plate.value.trim();
+
+      if (!value) {
+        message.style.color = "#b42318";
+        message.textContent = "Anh/chị hãy nhập biển số trước.";
+        plate.focus();
+        return;
+      }
+
+      button.disabled = true;
+
+      try {
+        if (!window.isSecureContext || !navigator.clipboard) {
+          throw new Error("Clipboard unavailable");
+        }
+
+        await navigator.clipboard.writeText(value);
+        message.style.color = "#087443";
+        message.textContent = "✓ Đã sao chép biển số " + value;
+      } catch (error) {
+        message.style.color = "#b42318";
+        message.textContent =
+          "Chưa sao chép được. Trình duyệt hoặc cửa sổ nhúng " +
+          "chưa cho phép ghi vào Clipboard.";
+      } finally {
+        button.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
