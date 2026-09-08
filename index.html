@@ -4,26 +4,50 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Sao chép biển số</title>
+
+  <!-- Thư viện Zoho Creator Widget SDK phiên bản 2 -->
+  <script src="https://static.zohocdn.com/creator/widgets/version/2.0/widgetsdk-min.js"></script>
+
   <style>
-    * { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       margin: 0;
-      padding: 24px;
+      padding: 16px;
       font-family: Arial, sans-serif;
       background: #f3f7fb;
       color: #183858;
     }
+
     .card {
+      width: 100%;
       max-width: 480px;
       margin: 0 auto;
       padding: 24px;
-      background: white;
+      background: #ffffff;
       border: 1px solid #dce5ee;
       border-radius: 14px;
     }
-    h2 { margin: 0 0 20px; font-size: 20px; }
-    label { display: block; margin-bottom: 8px; }
-    .row { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    h2 {
+      margin: 0 0 20px;
+      font-size: 20px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 15px;
+    }
+
+    .row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
     input {
       flex: 1;
       min-width: 140px;
@@ -31,38 +55,68 @@
       padding: 12px;
       border: 1px solid #bacbdb;
       border-radius: 8px;
+      background: #ffffff;
       font-size: 20px;
       color: #b00040;
     }
+
+    input:focus {
+      outline: 2px solid #20558b;
+      outline-offset: 2px;
+    }
+
     button {
       padding: 12px 18px;
       border: 0;
       border-radius: 8px;
       background: #20558b;
-      color: white;
+      color: #ffffff;
       font-size: 15px;
       cursor: pointer;
     }
-    button:disabled { opacity: .6; cursor: wait; }
+
+    button:hover:not(:disabled) {
+      background: #17416c;
+    }
+
+    button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
     #message {
-      min-height: 40px;
+      min-height: 42px;
       margin: 14px 0 0;
       font-size: 14px;
       line-height: 1.5;
     }
   </style>
 </head>
+
 <body>
   <main class="card">
     <h2>SAO CHÉP BIỂN SỐ</h2>
+
     <label for="plate">Biển số xe</label>
+
     <div class="row">
-      <input id="plate" type="text"
-             placeholder="Nhập biển số để thử"
-             autocomplete="off" spellcheck="false">
-      <button id="copy" type="button">📋 Sao chép</button>
+      <input
+        id="plate"
+        type="text"
+        placeholder="Đang nhận biển số..."
+        autocomplete="off"
+        spellcheck="false"
+        readonly
+      >
+
+      <button id="copy" type="button" disabled>
+        📋 Sao chép
+      </button>
     </div>
-    <p id="message" role="status" aria-live="polite"></p>
+
+    <p id="message" role="status" aria-live="polite">
+      Đang nhận biển số từ Creator...
+    </p>
   </main>
 
   <script>
@@ -70,39 +124,117 @@
     const button = document.getElementById("copy");
     const message = document.getElementById("message");
 
-    plate.addEventListener("input", () => {
-      message.textContent = "";
-    });
+    // Hiển thị thông báo bằng văn bản thuần
+    function thongBao(noiDung, mau) {
+      message.textContent = noiDung;
+      message.style.color = mau;
+    }
 
+    // Đọc tham số từ Page chứa Widget
+    async function nhanBienSo() {
+      plate.value = "";
+      plate.readOnly = true;
+      button.disabled = true;
+      plate.placeholder = "Đang nhận biển số...";
+
+      // Giới hạn thời gian chờ phản hồi từ Creator
+      let timeoutId;
+
+      try {
+        if (
+          !window.ZOHO ||
+          !ZOHO.CREATOR ||
+          !ZOHO.CREATOR.UTIL ||
+          typeof ZOHO.CREATOR.UTIL.getQueryParams !== "function"
+        ) {
+          throw new Error("Không tải được thư viện Zoho.");
+        }
+
+        const timeout = new Promise((_, reject) => {
+          timeoutId = setTimeout(() => {
+            reject(new Error("Quá thời gian nhận tham số."));
+          }, 15000);
+        });
+
+        const params = await Promise.race([
+          ZOHO.CREATOR.UTIL.getQueryParams(),
+          timeout
+        ]);
+
+        const bienSo = String(params?.bien_so ?? "").trim();
+
+        if (bienSo === "") {
+          plate.placeholder = "Chưa có biển số";
+          thongBao(
+            "Chưa nhận được biển số. Hãy mở từ nút trên Report.",
+            "#b42318"
+          );
+          return;
+        }
+
+        plate.value = bienSo;
+        button.disabled = false;
+
+        thongBao(
+          "Bấm Sao chép để lấy biển số.",
+          "#183858"
+        );
+      } catch (error) {
+        plate.value = "";
+        plate.placeholder = "Không nhận được biển số";
+
+        thongBao(
+          "Không đọc được tham số. Hãy mở Widget trong Page của Creator. " +
+          "Nếu đang ở Creator, hãy tải lại trang.",
+          "#b42318"
+        );
+      } finally {
+        clearTimeout(timeoutId);
+      }
+    }
+
+    // Sao chép khi người dùng bấm nút
     button.addEventListener("click", async () => {
-      const value = plate.value.trim();
+      const bienSo = plate.value.trim();
 
-      if (!value) {
-        message.style.color = "#b42318";
-        message.textContent = "Anh/chị hãy nhập biển số trước.";
-        plate.focus();
+      if (bienSo === "") {
+        thongBao(
+          "Chưa có biển số để sao chép.",
+          "#b42318"
+        );
         return;
       }
 
       button.disabled = true;
 
       try {
-        if (!window.isSecureContext || !navigator.clipboard) {
-          throw new Error("Clipboard unavailable");
+        if (
+          !window.isSecureContext ||
+          !navigator.clipboard ||
+          typeof navigator.clipboard.writeText !== "function"
+        ) {
+          throw new Error("Clipboard không khả dụng.");
         }
 
-        await navigator.clipboard.writeText(value);
-        message.style.color = "#087443";
-        message.textContent = "✓ Đã sao chép biển số " + value;
+        await navigator.clipboard.writeText(bienSo);
+
+        thongBao(
+          "✓ Đã sao chép biển số " + bienSo,
+          "#087443"
+        );
       } catch (error) {
-        message.style.color = "#b42318";
-        message.textContent =
+        thongBao(
           "Chưa sao chép được. Trình duyệt hoặc cửa sổ nhúng " +
-          "chưa cho phép ghi vào Clipboard.";
+          "chưa cho phép ghi vào Clipboard.",
+          "#b42318"
+        );
       } finally {
         button.disabled = false;
       }
     });
+
+    // Tự nhận biển số khi Widget mở
+    nhanBienSo();
   </script>
 </body>
 </html>
