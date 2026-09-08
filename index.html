@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Sao chép biển số</title>
 
-  <!-- Thư viện Zoho Creator Widget SDK phiên bản 2 -->
   <script src="https://static.zohocdn.com/creator/widgets/version/2.0/widgetsdk-min.js"></script>
 
   <style>
@@ -89,6 +88,7 @@
       margin: 14px 0 0;
       font-size: 14px;
       line-height: 1.5;
+      overflow-wrap: anywhere;
     }
   </style>
 </head>
@@ -124,20 +124,28 @@
     const button = document.getElementById("copy");
     const message = document.getElementById("message");
 
-    // Hiển thị thông báo bằng văn bản thuần
+    // ==========================================
+    // 1. HIỂN THỊ THÔNG BÁO
+    // ==========================================
     function thongBao(noiDung, mau) {
       message.textContent = noiDung;
       message.style.color = mau;
     }
 
-    // Đọc tham số từ Page chứa Widget
+    // ==========================================
+    // 2. NHẬN THAM SỐ bien_so TỪ PAGE CREATOR
+    // ==========================================
     async function nhanBienSo() {
       plate.value = "";
       plate.readOnly = true;
       button.disabled = true;
       plate.placeholder = "Đang nhận biển số...";
 
-      // Giới hạn thời gian chờ phản hồi từ Creator
+      thongBao(
+        "Đang nhận biển số từ Creator...",
+        "#183858"
+      );
+
       let timeoutId;
 
       try {
@@ -150,9 +158,10 @@
           throw new Error("Không tải được thư viện Zoho.");
         }
 
+        // Chờ phản hồi tối đa 15 giây
         const timeout = new Promise((_, reject) => {
           timeoutId = setTimeout(() => {
-            reject(new Error("Quá thời gian nhận tham số."));
+            reject(new Error("Quá thời gian nhận tham số (15 giây)."));
           }, 15000);
         });
 
@@ -163,16 +172,19 @@
 
         const bienSo = String(params?.bien_so ?? "").trim();
 
-      if (bienSo === "") {
-  plate.placeholder = "Chưa có biển số";
-  thongBao(
-    "Tham số Creator trả về: " + JSON.stringify(params),
-    "#b42318"
-  );
-  return;
-}
+        // Hiển thị dữ liệu trả về để kiểm tra khi thiếu biển số
+        if (bienSo === "") {
+          plate.placeholder = "Chưa có biển số";
+
+          thongBao(
+            "Tham số Creator trả về: " + JSON.stringify(params),
+            "#b42318"
+          );
+
+          return;
         }
 
+        // Đã nhận được biển số
         plate.value = bienSo;
         button.disabled = false;
 
@@ -183,10 +195,15 @@
       } catch (error) {
         plate.value = "";
         plate.placeholder = "Không nhận được biển số";
+        button.disabled = true;
+
+        const chiTiet = error && error.message
+          ? error.message
+          : "Không nhận được phản hồi hợp lệ.";
 
         thongBao(
-          "Không đọc được tham số. Hãy mở Widget trong Page của Creator. " +
-          "Nếu đang ở Creator, hãy tải lại trang.",
+          "Không đọc được tham số: " + chiTiet +
+          " Hãy mở Widget trong Page của Creator.",
           "#b42318"
         );
       } finally {
@@ -194,7 +211,9 @@
       }
     }
 
-    // Sao chép khi người dùng bấm nút
+    // ==========================================
+    // 3. SAO CHÉP BIỂN SỐ VÀO CLIPBOARD
+    // ==========================================
     button.addEventListener("click", async () => {
       const bienSo = plate.value.trim();
 
@@ -234,7 +253,9 @@
       }
     });
 
-    // Tự nhận biển số khi Widget mở
+    // ==========================================
+    // 4. KHỞI CHẠY
+    // ==========================================
     nhanBienSo();
   </script>
 </body>
