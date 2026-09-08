@@ -163,13 +163,14 @@
 
         const bienSo = String(params?.bien_so ?? "").trim();
 
-        if (bienSo === "") {
-          plate.placeholder = "Chưa có biển số";
-          thongBao(
-            "Chưa nhận được biển số. Hãy mở từ nút trên Report.",
-            "#b42318"
-          );
-          return;
+      if (bienSo === "") {
+  plate.placeholder = "Chưa có biển số";
+  thongBao(
+    "Tham số Creator trả về: " + JSON.stringify(params),
+    "#b42318"
+  );
+  return;
+}
         }
 
         plate.value = bienSo;
